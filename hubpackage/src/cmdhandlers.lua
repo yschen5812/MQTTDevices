@@ -16,7 +16,9 @@
 
   MQTT Device Driver - Capability Command handlers
 
---]] local log = require "log"
+--]]
+
+local log = require "log"
 local st_utils = require "st.utils"
 local capabilities = require "st.capabilities"
 local cosock = require "cosock"

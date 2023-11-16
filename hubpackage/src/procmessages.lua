@@ -16,7 +16,9 @@
 
   MQTT Device Driver - handles all MQTT message received for each device type
 
---]] local log = require "log"
+--]]
+
+local log = require "log"
 local capabilities = require "st.capabilities"
 local json = require "dkjson"
 local stutils = require "st.utils"

@@ -17,6 +17,7 @@
   MQTT Device Driver - supports receiving MQTT published messages for recognized device types:  switch, button, contact, motion, etc.
 
 --]] -- Edge libraries
+
 local capabilities = require "st.capabilities"
 local Driver = require "st.driver"
 local cosock = require "cosock"
