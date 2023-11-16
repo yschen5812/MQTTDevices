@@ -39,28 +39,10 @@ client_reset_inprogress = false
 creator_device = {}           -- referenced by other modules
 
 typemeta =  {
-              ['Switch']       = { ['profile'] = 'mqttswitch.v2b',       ['created'] = 0, ['switch'] = true  },
-              ['Button']       = { ['profile'] = 'mqttbutton.v2',        ['created'] = 0, ['switch'] = false },
-              ['Contact']      = { ['profile'] = 'mqttcontact.v2',       ['created'] = 0, ['switch'] = false },
-              ['Motion']       = { ['profile'] = 'mqttmotion.v2',        ['created'] = 0, ['switch'] = false },
-              ['Alarm']        = { ['profile'] = 'mqttalarm.v2',         ['created'] = 0, ['switch'] = false },
-              ['Dimmer']       = { ['profile'] = 'mqttdimmer.v3',        ['created'] = 0, ['switch'] = true },
-              ['Acceleration'] = { ['profile'] = 'mqttaccel.v1',         ['created'] = 0, ['switch'] = false },
-              ['Lock']         = { ['profile'] = 'mqttlock.v2',          ['created'] = 0, ['switch'] = false },
-              ['Presence']     = { ['profile'] = 'mqttpresence.v1',      ['created'] = 0, ['switch'] = false },
-              ['Sound']        = { ['profile'] = 'mqttsound.v1',         ['created'] = 0, ['switch'] = false },
-              ['Water']        = { ['profile'] = 'mqttwater.v1',         ['created'] = 0, ['switch'] = false },
-              ['Temperature']  = { ['profile'] = 'mqtttemp.v2',          ['created'] = 0, ['switch'] = false },
-              ['Humidity']     = { ['profile'] = 'mqtthumidity.v1',      ['created'] = 0, ['switch'] = false },
-              ['MotionPlus']   = { ['profile'] = 'mqttmotion_plus.v1',   ['created'] = 0, ['switch'] = false },
-              ['Energy']       = { ['profile'] = 'mqttenergy.v3d',       ['created'] = 0, ['switch'] = false },
-              ['Text']         = { ['profile'] = 'mqtttext.v2',          ['created'] = 0, ['switch'] = false },
-              ['Numeric']      = { ['profile'] = 'mqttnumeric.v1',       ['created'] = 0, ['switch'] = false },
-              ['CO2']          = { ['profile'] = 'mqttCO2.v1',           ['created'] = 0, ['switch'] = false },
-              ['Shade']        = { ['profile'] = 'mqttshade.v1b',        ['created'] = 0, ['switch'] = false },
-              ['Battery']      = { ['profile'] = 'mqttbattery.v1',       ['created'] = 0, ['switch'] = false },
-              ['Robot']        = { ['profile'] = 'mqttrobot.v1',         ['created'] = 0, ['switch'] = false },
-              ['Fan']          = { ['profile'] = 'mqttfan.v1',           ['created'] = 0, ['switch'] = true },
+              -- ['Button']       = { ['profile'] = 'mqttbutton.v2',        ['created'] = 0, ['switch'] = false },
+              -- ['Text']         = { ['profile'] = 'mqtttext.v2',          ['created'] = 0, ['switch'] = false },
+              -- ['Numeric']      = { ['profile'] = 'mqttnumeric.v1',       ['created'] = 0, ['switch'] = false },
+              ['Notification'] = { ['profile'] = 'mqttnotification.v1',  ['created'] = 0, ['switch'] = false },
             }
 
 -- Module variables
@@ -70,35 +52,22 @@ local clearcreatemsg_timer
 local shutdown_requested = false
 
 local MASTERPROFILE = 'mqttcreator.v9'
-local MASTERLABEL = 'MQTT Device Creator V1.9'
 
-local CREATECAPID  = 'partyvoice23922.createmqttdev9'
-local CREATECAPID8  = 'partyvoice23922.createmqttdev8'
-local CREATECAPID7 = 'partyvoice23922.createmqttdev7'
-local CREATECAPID6 = 'partyvoice23922.createmqttdev6'
+local CREATECAPID  = 'advanceguide47241.createmqttdev'
 
 
 -- Custom Capabilities
 cap_createdev_latest = capabilities[CREATECAPID]
-cap_createdev_old8 = capabilities[CREATECAPID8]
-cap_createdev_old7 = capabilities[CREATECAPID7]
-cap_createdev_old6 = capabilities[CREATECAPID6]
-cap_createdev = cap_createdev_old6
+cap_createdev = cap_createdev_latest
 
-cap_status = capabilities["partyvoice23922.status"]
-cap_topiclist = capabilities["partyvoice23922.topiclist"]
-cap_refresh = capabilities["partyvoice23922.refresh"]
-cap_custompublish = capabilities["partyvoice23922.mqttpublish"]
+cap_status = capabilities["advanceguide47241.status"]
+cap_topiclist = capabilities["advanceguide47241.topiclist"]
+cap_refresh = capabilities["advanceguide47241.refresh"]
+cap_custompublish = capabilities["advanceguide47241.mqttpublish"]
 
-cap_tempset = capabilities["partyvoice23922.vtempset"]
-cap_humidityset = capabilities["partyvoice23922.vhumidityset"]
-cap_text = capabilities["partyvoice23922.mqtttext2"]
-cap_setenergy = capabilities["partyvoice23922.setenergy"]
-cap_setpower = capabilities["partyvoice23922.setpower"]
-cap_numfield = capabilities["partyvoice23922.numberfield"]
-cap_unitfield = capabilities["partyvoice23922.unitfield"]
+cap_text = capabilities["advanceguide47241.mqtttext"]
 
-cap_reset = capabilities["partyvoice23922.resetselect"]
+-- cap_reset = capabilities["advanceguide47241.resetselect"]
 
 
 
@@ -256,16 +225,6 @@ local function device_init(driver, device)
   
     creator_device = device
     
-    if device:supports_capability_by_id(CREATECAPID) then
-      cap_createdev = cap_createdev_latest
-    elseif device:supports_capability_by_id(CREATECAPID8) then
-      cap_createdev = cap_createdev_old8
-    elseif device:supports_capability_by_id(CREATECAPID7) then
-      cap_createdev = cap_createdev_old7
-    else
-      cap_createdev = cap_createdev_old6
-    end
-    
     device:emit_event(cap_createdev.deviceType(' '))
     device:emit_event(cap_status.status('Not Connected'))
     device:emit_event(cap_topiclist.topiclist(' ', { visibility = { displayed = false } }))
@@ -290,70 +249,9 @@ local function device_added (driver, device)
 
     local dtype = device.device_network_id:match('MQTT_(.+)_+')
 
-    if (dtype == 'Motion') or (dtype == 'MotionPlus') then
-      device:emit_event(capabilities.motionSensor.motion('inactive'))
-    end
-    
-    if dtype == 'Switch' then
-      device:emit_event(capabilities.switch.switch('off'))
-    elseif dtype == 'Dimmer' then
-      device:emit_event(capabilities.switchLevel.level(0))
-      device:emit_event(capabilities.switch.switch('off'))
-    elseif dtype == 'Contact' then
-      device:emit_event(capabilities.contactSensor.contact('closed'))
-    elseif dtype == 'MotionPlus' then
-      device:emit_event(capabilities.illuminanceMeasurement.illuminance(0))
-      device:emit_event(capabilities.battery.battery(100))
-      
-    elseif dtype == 'Button' then
-      local supported_values =  {
-                                  capabilities.button.button.pushed.NAME,
-                                  capabilities.button.button.held.NAME,
-                                  capabilities.button.button.double.NAME,
-                                  capabilities.button.button.pushed_3x.NAME,
-                                }
-      device:emit_event(capabilities.button.supportedButtonValues(supported_values))
-    elseif dtype == 'Alarm' then
-      device:emit_event(capabilities.alarm.alarm('off'))
-      
-    elseif dtype == 'Acceleration' then
-      device:emit_event(capabilities.accelerationSensor.acceleration('inactive'))
-    elseif dtype == 'Lock' then
-      device:emit_event(capabilities.lock.lock('unlocked'))
-    elseif dtype == 'Presence' then
-      device:emit_event(capabilities.presenceSensor.presence('not present'))
-    elseif dtype == 'Sound' then
-      device:emit_event(capabilities.soundSensor.sound('not detected'))
-      device:emit_event(capabilities.audioVolume.volume(0))
-    elseif dtype == 'Water' then
-      device:emit_event(capabilities.waterSensor.water('dry'))
-    elseif dtype == 'Temperature' then
-      device:emit_event(capabilities.temperatureMeasurement.temperature({value=20, unit='C'}))
-      device:emit_event(cap_tempset.vtemp({value=20, unit='C'}))
-    elseif dtype == 'Humidity' then
-      device:emit_event(capabilities.relativeHumidityMeasurement.humidity(0))
-      device:emit_event(cap_humidityset.vhumidity(0))
-    elseif dtype == 'Energy' then
-      device:emit_event(capabilities.energyMeter.energy({value = 0, unit = "kWh" }))
-      device:emit_event(cap_reset.cmdSelect(' '))
-      device:emit_event(capabilities.powerMeter.power(0))
-      device:emit_event(cap_setenergy.energyval(0))
-      device:emit_event(cap_setpower.powerval(0))
-    elseif dtype == 'Text' then
-      device:emit_event(cap_text.text(' '))
-    elseif dtype == 'Numeric' then
-      device:emit_event(cap_numfield.numberval(0))
-      device:emit_event(cap_unitfield.unittext(' '))
-    elseif dtype == 'CO2' then
-      device:emit_event(capabilities.carbonDioxideMeasurement.carbonDioxide(0))
-    elseif dtype == 'Shade' then
-      device:emit_event(capabilities.windowShade.windowShade('open'))
-      device:emit_event(capabilities.windowShadeLevel.shadeLevel(100))
-    elseif dtype == 'Battery' then
-      device:emit_event(capabilities.battery.battery(100))
-    elseif dtype == 'Fan' then
-      device:emit_event(capabilities.fanSpeed.fanSpeed(0))
-      
+    -- Handle initialization for different device types
+    if (dtype == 'Notification') then
+      device:emit_event(capabilities.audioVolume.volume(50))
     end
 
     creator_device:emit_event(cap_createdev.deviceType('Device created'))
@@ -486,10 +384,10 @@ local function discovery_handler(driver, _, should_continue)
     log.info("Creating MQTT Creator device")
 
     local MFG_NAME = 'SmartThings Community'
-    local MODEL = 'MQTTCreatorV1'
-    local VEND_LABEL = MASTERLABEL           --update; change for testing
-    local ID = 'MQTTDev_Masterv1'               --change for testing
-    local PROFILE = MASTERPROFILE           --update; change for testing
+    local MODEL = 'YC_MQTTCreator'
+    local VEND_LABEL = '[YC] MQTT Device Creator' --update; change for testing
+    local ID = 'YC_MQTTDev_Master'                --change for testing
+    local PROFILE = MASTERPROFILE                 --update; change for testing
 
     -- Create master creator device
 
@@ -516,7 +414,7 @@ end
 -----------------------------------------------------------------------
 --        DRIVER MAINLINE: Build driver context table
 -----------------------------------------------------------------------
-thisDriver = Driver("MQTT Devices", {
+thisDriver = Driver("[YC] MQTT Device Creator", {
   discovery = discovery_handler,
   lifecycle_handlers = {
     init = device_init,
@@ -528,88 +426,28 @@ thisDriver = Driver("MQTT Devices", {
   },
   driver_lifecycle = shutdown_handler,
   capability_handlers = {
+    [capabilities.audioNotification.ID] = {
+      [capabilities.audioNotification.commands.playTrack.NAME] = cmd.handle_audio_notification,
+      [capabilities.audioNotification.commands.playTrackAndResume.NAME] = cmd.handle_audio_notification,
+      [capabilities.audioNotification.commands.playTrackAndRestore.NAME] = cmd.handle_audio_notification,
+    },
+    [capabilities.audioVolume.ID] = {
+      -- [capabilities.audioVolume.commands.volumeUp.NAME] = cmd.handle_volume_up,
+      -- [capabilities.audioVolume.commands.volumeDown.NAME] = cmd.handle_volume_down,
+      [capabilities.audioVolume.commands.setVolume.NAME] = cmd.handle_set_speaker_volume,
+    },
     [cap_createdev_latest.ID] = {
       [cap_createdev_latest.commands.setDeviceType.NAME] = cmd.handle_createdevice,
-    },
-    [cap_createdev_old7.ID] = {
-      [cap_createdev_old7.commands.setDeviceType.NAME] = cmd.handle_createdevice,
-    },
-    [cap_createdev_old6.ID] = {
-      [cap_createdev_old6.commands.setDeviceType.NAME] = cmd.handle_createdevice,
     },
     [cap_refresh.ID] = {
       [cap_refresh.commands.push.NAME] = cmd.handle_refresh,
     },
-    [cap_tempset.ID] = {
-      [cap_tempset.commands.setvTemp.NAME] = cmd.handle_tempset,
-    },
-    [cap_humidityset.ID] = {
-      [cap_humidityset.commands.setvHumidity.NAME] = cmd.handle_humidityset,
-    },
-    [capabilities.switch.ID] = {
-      [capabilities.switch.commands.on.NAME] = cmd.handle_switch,
-      [capabilities.switch.commands.off.NAME] = cmd.handle_switch,
-    },
-    [capabilities.switchLevel.ID] = {
-      [capabilities.switchLevel.commands.setLevel.NAME] = cmd.handle_dimmer,
-    },
-    [capabilities.momentary.ID] = {
-      [capabilities.momentary.commands.push.NAME] = cmd.handle_button,
-    },
-    [capabilities.alarm.ID] = {
-      [capabilities.alarm.commands.off.NAME] = cmd.handle_alarm,
-      [capabilities.alarm.commands.siren.NAME] = cmd.handle_alarm,
-      [capabilities.alarm.commands.strobe.NAME] = cmd.handle_alarm,
-      [capabilities.alarm.commands.both.NAME] = cmd.handle_alarm,
-    },
-    [capabilities.lock.ID] = {
-      [capabilities.lock.commands.lock.NAME] = cmd.handle_lock,
-      [capabilities.lock.commands.unlock.NAME] = cmd.handle_lock,
-    },
-    [capabilities.audioVolume.ID] = {
-      [capabilities.audioVolume.commands.setVolume.NAME] = cmd.handle_volume,
-    },
-    [capabilities.energyMeter.ID] = {
-      [capabilities.energyMeter.commands.resetEnergyMeter.NAME] = cmd.handle_reset,
-    },
-    [capabilities.windowShade.ID] = {
-      [capabilities.windowShade.commands.open.NAME] = cmd.handle_shade,
-      [capabilities.windowShade.commands.close.NAME] = cmd.handle_shade,
-      [capabilities.windowShade.commands.pause.NAME] = cmd.handle_shade,
-    },
-    [capabilities.windowShadeLevel.ID] = {
-      [capabilities.windowShadeLevel.commands.setShadeLevel.NAME] = cmd.handle_shade,
-    },
-    [cap_reset.ID] = {
-      [cap_reset.commands.setSelect.NAME] = cmd.handle_reset,
-    },
     [cap_custompublish.ID] = {
       [cap_custompublish.commands.publish.NAME] = cmd.handle_custompublish,
-    },
-    [cap_setenergy.ID] = {
-      [cap_setenergy.commands.setEnergy.NAME] = cmd.handle_setenergy,
-    },
-    [cap_setpower.ID] = {
-      [cap_setpower.commands.setPower.NAME] = cmd.handle_setpower,
-    },
-    [cap_numfield.ID] = {
-      [cap_numfield.commands.setNumber.NAME] = cmd.handle_setnumeric,
-    },
-    [cap_unitfield.ID] = {
-      [cap_unitfield.commands.setUnit.NAME] = cmd.handle_setnumeric,
-    },
-    [capabilities.robotCleanerCleaningMode.ID] = {
-      [capabilities.robotCleanerCleaningMode.commands.setRobotCleanerCleaningMode.NAME] = cmd.handle_robot,
-    },
-    [capabilities.robotCleanerMovement.ID] = {
-      [capabilities.robotCleanerMovement.commands.setRobotCleanerMovement.NAME] = cmd.handle_robot,
-    },
-    [capabilities.fanSpeed.ID] = {
-      [capabilities.fanSpeed.commands.setFanSpeed.NAME] = cmd.handle_fanspeed,
     },
   }
 })
 
-log.info ('MQTT Device Driver V1.8 Started')
+log.info ('[YC] MQTT Device Driver Started')
 
 thisDriver:run()

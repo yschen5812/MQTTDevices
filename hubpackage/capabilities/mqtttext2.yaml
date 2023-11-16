@@ -1,7 +1,7 @@
-id: partyvoice23922.mqtttext2
+id: advanceguide47241.mqtttext
 version: 1
 status: proposed
-name: mqtttext2
+name: mqtttext
 ephemeral: false
 attributes:
   text:

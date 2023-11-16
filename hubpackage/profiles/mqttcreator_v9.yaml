@@ -2,15 +2,15 @@ name: mqttcreator.v9
 components:
   - id: main
     capabilities:
-      - id: partyvoice23922.createmqttdev9
+      - id: advanceguide47241.createmqttdev
         version: 1
-      - id: partyvoice23922.status
+      - id: advanceguide47241.status
         version: 1
-      - id: partyvoice23922.topiclist
+      - id: advanceguide47241.topiclist
         version: 1
-      - id: partyvoice23922.refresh
+      - id: advanceguide47241.refresh
         version: 1
-      - id: partyvoice23922.mqttpublish
+      - id: advanceguide47241.mqttpublish
         version: 1
     categories:
       - name: Others

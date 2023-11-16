@@ -1,0 +1,42 @@
+{
+    "dashboard": {
+        "states": [],
+        "actions": []
+    },
+    "detailView": [
+        {
+            "label": "{{i18n.label}}",
+            "displayType": "list",
+            "list": {
+                "command": {
+                    "name": "setDeviceType",
+                    "alternatives": [
+                        {
+                            "key": "Notification",
+                            "value": "Notification",
+                            "type": "active"
+                        }
+                    ],
+                    "argumentType": "string"
+                },
+                "state": {
+                    "value": "deviceType.value",
+                    "valueType": "string",
+                    "alternatives": [
+                        {
+                            "key": "Notification",
+                            "value": "Notification",
+                            "type": "active"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "automation": {
+        "conditions": [],
+        "actions": []
+    },
+    "id": "advanceguide47241.createmqttdev",
+    "version": 1
+}

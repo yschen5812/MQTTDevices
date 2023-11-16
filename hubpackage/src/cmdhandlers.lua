@@ -19,6 +19,7 @@
 --]]
 
 local log = require "log"
+local st_utils = require "st.utils"
 local capabilities = require "st.capabilities"
 local cosock = require "cosock"
 local socket = require "cosock.socket"          -- just for time
@@ -104,204 +105,6 @@ local function handle_createdevice(driver, device, command)
 
 end
 
-local function handle_switch(driver, device, command)
-
-  log.info ('Switch triggered:', command.command)
-  
-  device:emit_event(capabilities.switch.switch(command.command))
-
-  local dtype = device.device_network_id:match('MQTT_(.+)_+')
-  
-  if dtype == 'Switch' and device.preferences.publish == true then
-      
-    local cmdmap = {
-                      ['on'] = device.preferences.switchon,
-                      ['off'] = device.preferences.switchoff
-                   }
-           
-    publish_message(device, cmdmap[command.command])
-
-  end
-end
-
-local function handle_button(driver, device, command)
-
-  log.info ('Button pressed:', command.command)
-  
-  device:emit_event(capabilities.button.button.pushed({state_change = true}))
-  
-  if device.preferences.publish == true then
-    
-    publish_message(device, device.preferences.butpush)
-      
-  end
-end
-
-local function handle_alarm(driver, device, command)
-
-  log.info ('Alarm triggered:', command.command)
-  
-  device:emit_event(capabilities.alarm.alarm(command.command))
-
-  if device.preferences.publish == true then
-    
-    local payload
-    
-    local cmdmap = {
-                      ['off'] = device.preferences.alarmoff,
-                      ['siren'] = device.preferences.alarmsiren,
-                      ['strobe'] = device.preferences.alarmstrobe,
-                      ['both'] = device.preferences.alarmboth,
-                   }
-                   
-    publish_message(device, cmdmap[command.command])
-
-  end
-end
-
-
-local function handle_dimmer(driver, device, command)
-
-  log.info ('Dimmmer value changed to ', command.args.level)
-  
-  local dimmerlevel = command.args.level
-  
-  if device.preferences.dimmermax then
-    if dimmerlevel > device.preferences.dimmermax then
-      dimmerlevel = device.preferences.dimmermax
-    end
-  end
-    
-  device:emit_event(capabilities.switchLevel.level(dimmerlevel))
-  
-  if device:supports_capability_by_id('switch') then
-    if dimmerlevel > 0 then
-      device:emit_event(capabilities.switch.switch('on'))
-    else
-      device:emit_event(capabilities.switch.switch('off'))
-    end
-  end
-  
-  if device.preferences.publish == true then
-    
-    publish_message(device, tostring(dimmerlevel))
-    
-  end
-end
-
-
-local function handle_fanspeed(driver, device, command)
-
-  log.info ('Fan speed value changed to ', command.args.speed)
-  
-  device:emit_event(capabilities.fanSpeed.fanSpeed(command.args.speed))
-  
-  local minspeed, maxspeed = device.preferences.fanspeedrange:match('^(%d+)-(%d+)$')
-
-  minspeed = tonumber(minspeed)
-  maxspeed = tonumber(maxspeed)
-  
-  if (type(minspeed) == 'number') and (type(maxspeed) == 'number') then
-  
-    local pubspeedmap = { 
-                          [0] = minspeed,
-                          [1] = math.floor(maxspeed * .33),
-                          [2] = math.floor(maxspeed * .50),
-                          [3] = math.floor(maxspeed * .66),
-                          [4] = maxspeed
-                        }
-  
-    if device.preferences.publish == true then
-      
-      publish_message(device, tostring(pubspeedmap[command.args.speed]))
-      
-    end
-  else
-    log.warn ('Invalid fan speed range configured:', device.preferences.fanspeedrange)
-  end
-end
-
-
-local function handle_lock(driver, device, command)
-
-  log.info ('Lock command received: ', command.command)
-  
-  local attrmap = { ['lock']   = 'locked',
-                    ['unlock'] = 'unlocked'
-                  }
-  
-  device:emit_event(capabilities.lock.lock(attrmap[command.command]))
-  
-  if device.preferences.publish == true then
-    local cmdmap
-    if device.preferences.locklock then
-      cmdmap = {
-                  ['lock'] = device.preferences.locklock,
-                  ['unlock'] = device.preferences.lockunlock
-               }
-    else
-      cmdmap = {
-                  ['lock'] = device.preferences.locklocked,
-                  ['unlock'] = device.preferences.lockunlocked
-               }
-    end
-                   
-    publish_message(device, cmdmap[command.command])
-    
-  end
-
-end
-
-
-local function handle_volume(driver, device, command)
-  if command.args.volume < device.preferences.threshold then
-    device:emit_event(capabilities.soundSensor.sound('not detected'))
-  else
-    device:emit_event(capabilities.soundSensor.sound('detected'))
-  end
-end
-
-
-local function handle_tempset(driver, device, command)
-
-  local tempunit = 'C'
-  if device.preferences.dtempunit == 'fahrenheit' then
-    tempunit = 'F'
-  end
-  
-  device:emit_event(capabilities.temperatureMeasurement.temperature({value=command.args.temp, unit=tempunit}))
-  
-  device:emit_event(cap_tempset.vtemp({value=command.args.temp, unit=tempunit}))
-  
-  if device.preferences.publish == true then
-    publish_message(device, tostring(command.args.temp))
-  end
-
-end
-
-
-local function handle_humidityset(driver, device, command)
-
-  device:emit_event(capabilities.relativeHumidityMeasurement.humidity(command.args.humidity))
-  
-  device:emit_event(cap_humidityset.vhumidity(command.args.humidity))
-  
-  if device.preferences.publish == true then
-    publish_message(device, tostring(command.args.humidity))
-  end
-
-end
-
-local function handle_reset(driver, device, command)
-
-  log.info ('Energy Meter Reset requested')
-  
-  device:emit_event(cap_reset.cmdSelect(' ', { visibility = { displayed = false }}))
-  
-  device:emit_event(capabilities.energyMeter.energy({value = 0, unit = "kWh" }))
-  
-end
-
 local function disptable(table, tab, maxlevels, currlevel)
 
 	if not currlevel then; currlevel = 0; end
@@ -328,173 +131,38 @@ local function handle_custompublish(driver, device, command)
 
 end
 
+local function handle_audio_notification(driver, device, command)
+  if device.device_network_id:match('MQTT_Notification_+') then
 
-local function handle_setenergy(driver, device, command)
+    local msgobj = {}
+    msgobj['uri'] = command.args.uri
 
-  log.info (string.format('Energy value set to %s', command.args.energyval))
-  device:emit_event(cap_setenergy.energyval({value = command.args.energyval, unit = device.preferences.eunitsset}))
-  device:emit_event(capabilities.energyMeter.energy({value = command.args.energyval, unit=device.preferences.eunitsset}))
+    local volume_level = device:get_latest_state("main", capabilities.audioVolume.ID, capabilities.audioVolume.volume.NAME) or 50
+    msgobj['volume'] = st_utils.clamp_value(volume_level, 0, 100)
 
-  if device.preferences.epublish == true then
-    publish_message(device, tostring(command.args.energyval), device.preferences.epubtopic)
-  end
-
-end
-
-
-local function handle_setpower(driver, device, command)
-
-  log.info (string.format('Power value set to %s', command.args.powerval))
-  
-  local disp_multiplier = 1
-  if device.preferences.punitsset == 'mwatts' then
-    disp_multiplier = .001
-  elseif device.preferences.punitsset == 'kwatts' then
-    disp_multiplier = 1000
-  end
-  device:emit_event(cap_setpower.powerval(command.args.powerval * disp_multiplier))
-  device:emit_event(capabilities.powerMeter.power(command.args.powerval * disp_multiplier))
-
-  if device.preferences.ppublish == true then
-    publish_message(device, tostring(command.args.powerval), device.preferences.ppubtopic)
-  end
-
-end
-
-
-local function handle_setnumeric(driver, device, command)
-
-  if command.command == 'setNumber' then
-    device:emit_event(cap_numfield.numberval(command.args.numberval))
-  
-    if device.preferences.publish == true then
-      
-      local sendmsg
-      if device.preferences.format == 'json' then
-        local msgobj = {}
-      
-        msgobj[device.preferences.jsonelement] = command.args.numberval
-        msgobj[device.preferences.unitkey] = device.state_cache.main[cap_unitfield.ID].unittext.value
-        
-        sendmsg = json.encode(msgobj, { indent = false })
-      
-      else
-        sendmsg = tostring(command.args.numberval) .. ' ' .. device.state_cache.main[cap_unitfield.ID].unittext.value
-      
-      end  
-      
-      publish_message(device, sendmsg)
-    end
-  
-  elseif command.command == 'setUnit' then
-    device:emit_event(cap_unitfield.unittext(command.args.unittext))
-
+    sendmsg = json.encode(msgobj, { indent = false })
+    publish_message(device, sendmsg)
   end
 end
 
-local function handle_shade(driver, device, command)
+local function handle_set_speaker_volume(driver, device, command)
+  local newVolume = st_utils.clamp_value(command.args.volume, 0, 100)
+  device:emit_event(capabilities.audioVolume.volume(newVolume))
 
-  local cmdmap =  { 
-                    ['open'] = {['attribute'] = 'open', ['pubval'] = device.preferences.shadeopen},
-                    ['close'] = {['attribute'] = 'closed', ['pubval'] = device.preferences.shadeclose},
-                    ['pause'] = {['attribute'] = 'partially open', ['pubval'] = device.preferences.shadepause},
-                    ['setShadeLevel'] = {['attribute'] = command.args.shadeLevel, ['pubval'] = ''},
-                  }
-
-  if command.command == 'setShadeLevel' then
-    device:emit_event(capabilities.windowShadeLevel.shadeLevel(cmdmap[command.command].attribute))
-    cmdmap['setShadeLevel'].pubval = tostring(command.args.shadeLevel)
-    if command.args.shadeLevel == 0 then
-      device:emit_event(capabilities.windowShade.windowShade('closed'))
-    elseif command.args.shadeLevel == 100 then
-      device:emit_event(capabilities.windowShade.windowShade('open'))
-    else
-      device:emit_event(capabilities.windowShade.windowShade('partially open'))
-    end
-    
-  else
-    device:emit_event(capabilities.windowShade.windowShade(cmdmap[command.command].attribute))
-    if cmdmap[command.command].attribute == 'open' then
-      device:emit_event(capabilities.windowShadeLevel.shadeLevel(100))
-    elseif cmdmap[command.command].attribute == 'closed' then
-      device:emit_event(capabilities.windowShadeLevel.shadeLevel(0))
-    end
+  if device.device_network_id:match('MQTT_Notification_+') then
+    local msgobj = {
+      ['volume'] = newVolume
+    }
+    sendmsg = json.encode(msgobj, { indent = false })
+    publish_message(device, sendmsg)
   end
-  
-  if device.preferences.publish then
-    publish_message(device, cmdmap[command.command].pubval)
-  end
-
-end
-
-
-local function handle_robot(driver, device, command)
-
-  log.debug ('Robot cleaner command/mode:', command.command, command.args.mode)
-  
-  if command.command == 'setRobotCleanerCleaningMode' then
-    device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode(command.args.mode))
-    
-    if command.args.mode == 'stop' then
-      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('idle'))
-      if device.preferences.publish then
-        publish_message(device, device.preferences.robotstop)
-      end
-    elseif command.args.mode == 'auto' then
-      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('cleaning'))
-      if device.preferences.publish then
-        publish_message(device, device.preferences.robotstart)
-      end
-    
-    end
-  
-  elseif command.command == 'setRobotCleanerMovement' then
-    if command.args.mode ~= 'charging' then
-      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement(command.args.mode))
-    else
-      device:emit_event(capabilities.robotCleanerMovement.robotCleanerMovement('homing'))
-    end
-    
-    if command.args.mode == 'idle' then
-      device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
-      if device.preferences.publish then
-        publish_message(device, device.preferences.robotpause)
-      end
-      
-    elseif command.args.mode == 'cleaning' then
-      device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('auto'))
-      if device.preferences.publish then
-        publish_message(device, device.preferences.robotstart)
-      end
-    
-    elseif (command.args.mode == 'charging') or (command.args.mode == 'homing') then
-      device:emit_event(capabilities.robotCleanerCleaningMode.robotCleanerCleaningMode('manual'))
-      if device.preferences.publish then
-        publish_message(device, device.preferences.robothome)
-      end
-    end
-  end
-  
 end
 
 return  {
           handle_refresh = handle_refresh,
           handle_createdevice = handle_createdevice,
-          handle_switch = handle_switch,
-          handle_button = handle_button,
-          handle_alarm = handle_alarm,
-          handle_dimmer = handle_dimmer,
-          handle_lock = handle_lock,
-          handle_volume = handle_volume,
-          handle_tempset = handle_tempset,
-          handle_humidityset = handle_humidityset,
-          handle_reset = handle_reset,
           handle_custompublish = handle_custompublish,
-          handle_setenergy = handle_setenergy,
-          handle_setpower = handle_setpower,
-          handle_setnumeric = handle_setnumeric,
-          handle_shade = handle_shade,
-          handle_robot = handle_robot,
-          handle_fanspeed = handle_fanspeed,
+          handle_audio_notification = handle_audio_notification,
+          handle_set_speaker_volume = handle_set_speaker_volume,
         }
         

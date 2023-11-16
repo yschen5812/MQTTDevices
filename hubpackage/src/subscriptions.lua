@@ -104,15 +104,24 @@ end
 
 
 local function subscribe_topic(device)
+  local subTopic = device.preferences.subTopic
 
-  if is_subscribed(device.preferences.subTopic) then
-    log.debug ('Already subscribed to topic', device.preferences.subTopic)
-    SUBSCRIBED_TOPICS[device.id] = device.preferences.subTopic
+  if (not subTopic or subTopic:match("^%s*$") ~= nil) then
+    log.debug('Empty subscription topic, skip subscribing topic for', device.device_network_id)
+    return
+  end
+
+  log.debug ('Subscribing device to topic ' .. subTopic .. ' for device ' .. device.device_network_id)
+  subTopic = string.gsub(subTopic, "^%s*(.-)%s*$", "%1")
+
+  if is_subscribed(subTopic) then
+    log.debug ('Already subscribed to topic', subTopic)
+    SUBSCRIBED_TOPICS[device.id] = subTopic
     device:emit_event(cap_status.status('Subscribed'))
   else
-    SUBSCRIBED_TOPICS[device.id] = device.preferences.subTopic
-    assert(client:subscribe{ topic=device.preferences.subTopic, qos=1, callback=function(suback)
-      log.info(string.format("Device <%s> subscribed to %s: %s", device.label, device.preferences.subTopic, suback))
+    SUBSCRIBED_TOPICS[device.id] = subTopic
+    assert(client:subscribe{ topic=subTopic, qos=1, callback=function(suback)
+      log.info(string.format("Device <%s> subscribed to %s: %s", device.label, subTopic, suback))
       
       creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
       device:emit_event(cap_status.status('Subscribed'))
@@ -124,13 +133,10 @@ end
 
 
 local function subscribe_all()
-
   local devicelist = thisDriver:get_devices()
   for _, device in ipairs(devicelist) do
     if not device.device_network_id:find('Master', 1, 'plaintext') then
-      if (device.preferences.subTopic ~= 'xxxxx/xxxxx') and (device.preferences.subTopic ~= nil) then
-        subscribe_topic(device)
-      end
+      subscribe_topic(device)
     end
   end
 end

@@ -1,0 +1,42 @@
+name: mqttnotification.v1
+components:
+  - id: main
+    capabilities:
+      - id: advanceguide47241.status
+        version: 1
+      - id: advanceguide47241.refresh
+        version: 1
+      - id: audioVolume
+        version: 1
+      - id: audioNotification
+        version: 1
+    categories:
+      - name: Speaker
+preferences:
+  - title: "Subscribe Topic"
+    name: subTopic
+    description: "MQTT Topic for Notifications"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: ''
+  - title: "Publish Topic"
+    name: pubtopic
+    description: "Topic String"
+    required: true
+    preferenceType: string
+    definition:
+      stringType: text
+      default: "xxxxx/xxxxx"
+  - title: "Publish QoS"
+    name: qos
+    description: "Quality of Service"
+    required: true
+    preferenceType: enumeration
+    definition:
+      options:
+        qos0: "0"
+        qos1: "1"
+        qos2: "2"
+      default: qos1

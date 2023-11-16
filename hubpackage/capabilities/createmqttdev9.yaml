@@ -1,7 +1,7 @@
-id: partyvoice23922.createmqttdev9
+id: advanceguide47241.createmqttdev
 version: 1
 status: proposed
-name: createmqttdev9
+name: createmqttdev
 ephemeral: false
 attributes:
   deviceType:
