@@ -16,10 +16,9 @@
 
   MQTT Device Driver - Subscriptions-related Functions
 
---]]
+--]] 
 
 local log = require "log"
-
 
 local function build_html(list)
 
@@ -29,30 +28,13 @@ local function build_html(list)
     html_list = html_list .. '<tr><td>' .. item .. '</td></tr>\n'
   end
 
-  local html =  {
-                  '<!DOCTYPE html>\n',
-                  '<HTML>\n',
-                  '<HEAD>\n',
-                  '<style>\n',
-                  'table, td {\n',
-                  '  border: 1px solid black;\n',
-                  '  border-collapse: collapse;\n',
-                  '  font-size: 12px;\n',
-                  '  padding: 3px;\n',
-                  '}\n',
-                  '</style>\n',
-                  '</HEAD>\n',
-                  '<BODY>\n',
-                  '<table>\n',
-                  html_list,
-                  '</table>\n',
-                  '</BODY>\n',
-                  '</HTML>\n'
-                }
-    
+  local html = {'<!DOCTYPE html>\n', '<HTML>\n', '<HEAD>\n', '<style>\n', 'table, td {\n',
+                '  border: 1px solid black;\n', '  border-collapse: collapse;\n', '  font-size: 12px;\n',
+                '  padding: 3px;\n', '}\n', '</style>\n', '</HEAD>\n', '<BODY>\n', '<table>\n', html_list, '</table>\n',
+                '</BODY>\n', '</HTML>\n'}
+
   return (table.concat(html))
 end
-
 
 local function determine_devices(targettopic)
 
@@ -75,24 +57,28 @@ local function determine_devices(targettopic)
 
 end
 
-
 local function is_subscribed(qtopic)
 
   for _, topic in pairs(SUBSCRIBED_TOPICS) do
-    if topic == qtopic then; return true; end
+    if topic == qtopic then
+
+      return true;
+    end
   end
   return false
 
 end
 
-
 local function unique_topic_list()
 
   local list = {}
   for _, topic in pairs(SUBSCRIBED_TOPICS) do
-    local alreadyfound=false
+    local alreadyfound = false
     for _, item in ipairs(list) do
-      if item == topic then; alreadyfound = true; end
+      if item == topic then
+
+        alreadyfound = true;
+      end
     end
     if not alreadyfound then
       table.insert(list, topic)
@@ -102,7 +88,6 @@ local function unique_topic_list()
 
 end
 
-
 local function subscribe_topic(device)
   local subTopic = device.preferences.subTopic
 
@@ -111,26 +96,29 @@ local function subscribe_topic(device)
     return
   end
 
-  log.debug ('Subscribing device to topic ' .. subTopic .. ' for device ' .. device.device_network_id)
+  log.debug('Subscribing device to topic ' .. subTopic .. ' for device ' .. device.device_network_id)
   subTopic = string.gsub(subTopic, "^%s*(.-)%s*$", "%1")
 
   if is_subscribed(subTopic) then
-    log.debug ('Already subscribed to topic', subTopic)
+    log.debug('Already subscribed to topic', subTopic)
     SUBSCRIBED_TOPICS[device.id] = subTopic
     device:emit_event(cap_status.status('Subscribed'))
   else
     SUBSCRIBED_TOPICS[device.id] = subTopic
-    assert(client:subscribe{ topic=subTopic, qos=1, callback=function(suback)
-      log.info(string.format("Device <%s> subscribed to %s: %s", device.label, subTopic, suback))
-      
-      creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
-      device:emit_event(cap_status.status('Subscribed'))
+    assert(client:subscribe{
+      topic = subTopic,
+      qos = 1,
+      callback = function(suback)
+        log.info(string.format("Device <%s> subscribed to %s: %s", device.label, subTopic, suback))
 
-    end})
+        creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
+        device:emit_event(cap_status.status('Subscribed'))
+
+      end
+    })
   end
 
 end
-
 
 local function subscribe_all()
   local devicelist = thisDriver:get_devices()
@@ -141,31 +129,35 @@ local function subscribe_all()
   end
 end
 
-
 local function unsubscribe(id, topic, delete_flag)
 
-  local qty_check_val = 1                                 -- =1 if device changing subscription; =0 if device was deleted
-  if delete_flag == true then; qty_check_val = 0; end
+  local qty_check_val = 1 -- =1 if device changing subscription; =0 if device was deleted
+  if delete_flag == true then
 
-  if #determine_devices(topic) == qty_check_val then      -- unsubscribe only if no more devices using this topic
+    qty_check_val = 0;
+  end
 
-    local rc, err = client:unsubscribe{ topic=topic, callback=function(unsuback)
-          log.info("\t\tUnsubscribe callback:", unsuback)
-      end}
-      
+  if #determine_devices(topic) == qty_check_val then -- unsubscribe only if no more devices using this topic
+
+    local rc, err = client:unsubscribe{
+      topic = topic,
+      callback = function(unsuback)
+        log.info("\t\tUnsubscribe callback:", unsuback)
+      end
+    }
+
     if rc == false then
-      log.debug ('\tUnsubscribe failed with err:', err)
+      log.debug('\tUnsubscribe failed with err:', err)
     else
-      log.debug (string.format('\tUnsubscribed from %s', topic))
+      log.debug(string.format('\tUnsubscribed from %s', topic))
       SUBSCRIBED_TOPICS[id] = nil
       creator_device:emit_event(cap_topiclist.topiclist(build_html(unique_topic_list())))
     end
   else
-    log.debug (string.format('Subscription to <%s> still in use by another device', topic))
+    log.debug(string.format('Subscription to <%s> still in use by another device', topic))
     SUBSCRIBED_TOPICS[id] = nil
   end
 end
-
 
 local function unsubscribe_all()
 
@@ -177,7 +169,6 @@ local function unsubscribe_all()
 
 end
 
-
 local function get_subscribed_topic(device)
 
   for id, topic in pairs(SUBSCRIBED_TOPICS) do
@@ -187,7 +178,6 @@ local function get_subscribed_topic(device)
   end
 end
 
-
 local function mqtt_subscribe(device)
 
   if client then
@@ -195,7 +185,7 @@ local function mqtt_subscribe(device)
     local id, topic = get_subscribed_topic(device)
 
     if topic then
-      log.debug (string.format('Unsubscribing device <%s> from %s', device.label, topic))
+      log.debug(string.format('Unsubscribing device <%s> from %s', device.label, topic))
       unsubscribe(id, topic)
     end
 
@@ -203,13 +193,12 @@ local function mqtt_subscribe(device)
   end
 end
 
-
-return	{
-          determine_devices = determine_devices,
-          subscribe_topic = subscribe_topic,
-          subscribe_all = subscribe_all,
-          mqtt_subscribe = mqtt_subscribe,
-          unsubscribe = unsubscribe,
-					unsubscribe_all = unsubscribe_all,
-          get_subscribed_topic = get_subscribed_topic,
-				}
+return {
+  determine_devices = determine_devices,
+  subscribe_topic = subscribe_topic,
+  subscribe_all = subscribe_all,
+  mqtt_subscribe = mqtt_subscribe,
+  unsubscribe = unsubscribe,
+  unsubscribe_all = unsubscribe_all,
+  get_subscribed_topic = get_subscribed_topic
+}
